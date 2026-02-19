@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بوت التداول</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a0f;
+    --surface: #0d1520;
+    --border: #1a2840;
+    --green: #00ff88;
+    --red: #ff3355;
+    --yellow: #ffcc00;
+    --blue: #0088ff;
+    --text: #c8d8e8;
+    --dim: #4a6080;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+    background-image: 
+      radial-gradient(ellipse at 20% 20%, rgba(0,136,255,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,255,136,0.03) 0%, transparent 60%);
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: white;
+  }
+
+  .logo span { color: var(--green); }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.2);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: #2a3850; }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .card.green::before { background: var(--green); }
+  .card.red::before { background: var(--red); }
+  .card.yellow::before { background: var(--yellow); }
+  .card.blue::before { background: var(--blue); }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 10px;
+  }
+
+  .card-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 28px;
+    font-weight: 600;
+    color: white;
+    line-height: 1;
+  }
+
+  .card-value.green { color: var(--green); }
+  .card-value.red { color: var(--red); }
+  .card-value.yellow { color: var(--yellow); }
+
+  .card-sub {
+    font-size: 12px;
+    color: var(--dim);
+    margin-top: 6px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 16px;
+  }
+
+  .stocks-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .stock-card:hover {
+    border-color: #2a3850;
+    transform: translateY(-2px);
+  }
+
+  .stock-card.active {
+    border-color: rgba(0,255,136,0.4);
+    background: rgba(0,255,136,0.04);
+  }
+
+  .stock-symbol {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 10px;
+  }
+
+  .stock-card.active .stock-symbol { color: var(--green); }
+
+  .indicator-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+
+  .ind-label {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.5px;
+  }
+
+  .ind-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .ind-value.good { color: var(--green); }
+  .ind-value.bad { color: var(--red); }
+  .ind-value.neutral { color: var(--yellow); }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    transition: width 1s ease;
+  }
+
+  .log-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+
+  .log-entry {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(26,40,64,0.5);
+    font-size: 13px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .log-entry:last-child { border-bottom: none; }
+
+  .log-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+    padding-top: 1px;
+  }
+
+  .log-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .log-msg { color: var(--text); flex: 1; }
+  .log-msg .highlight { color: var(--green); font-weight: 700; }
+  .log-msg .warn { color: var(--yellow); }
+  .log-msg .symbol { 
+    font-family: 'IBM Plex Mono', monospace; 
+    color: var(--blue);
+    font-weight: 600;
+  }
+
+  .market-closed {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255,204,0,0.06);
+    border: 1px solid rgba(255,204,0,0.15);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 28px;
+    color: var(--yellow);
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .countdown {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--yellow);
+    text-align: center;
+  }
+
+  .positions-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .positions-table th {
+    text-align: right;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--dim);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+  }
+
+  .positions-table td {
+    padding: 14px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(26,40,64,0.4);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .no-positions {
+    text-align: center;
+    padding: 40px;
+    color: var(--dim);
+    font-size: 13px;
+  }
+
+  .footer {
+    text-align: center;
+    color: var(--dim);
+    font-size: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .refresh-btn {
+    background: rgba(0,136,255,0.1);
+    border: 1px solid rgba(0,136,255,0.3);
+    color: var(--blue);
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    background: rgba(0,136,255,0.2);
+  }
+
+  @media (max-width: 1000px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .stocks-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">بوت<span>التداول</span></div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <button class="refresh-btn" onclick="updateAll()">⟳ تحديث</button>
+    <div class="status-badge">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">البوت يعمل</span>
+    </div>
+  </div>
+</header>
+
+<div class="market-closed" id="market-banner">
+  ⏰ السوق مغلق حالياً &nbsp;|&nbsp; يفتح الساعة <span id="open-time">4:30 مساءً</span> بتوقيت الرياض &nbsp;|&nbsp;
+  <span class="countdown" id="countdown">--:--:--</span>
+</div>
+
+<div class="grid">
+  <div class="card green">
+    <div class="card-label">رصيد البوت</div>
+    <div class="card-value green" id="balance">$100,000</div>
+    <div class="card-sub">Paper Trading</div>
+  </div>
+  <div class="card blue">
+    <div class="card-label">أسهم تحت المراقبة</div>
+    <div class="card-value" id="watchlist-count">5</div>
+    <div class="card-sub">AMC, SOFI, PLUG, MULN, SNDL</div>
+  </div>
+  <div class="card yellow">
+    <div class="card-label">صفقات مفتوحة</div>
+    <div class="card-value yellow" id="positions-count">0</div>
+    <div class="card-sub">لا توجد صفقات حالياً</div>
+  </div>
+  <div class="card red">
+    <div class="card-label">آخر فحص</div>
+    <div class="card-value" style="font-size:18px" id="last-check">--:--</div>
+    <div class="card-sub">كل 60 ثانية</div>
+  </div>
+</div>
+
+<div class="section-title">الأسهم المراقبة والمؤشرات</div>
+<div class="stocks-grid" id="stocks-grid">
+</div>
+
+<div class="section-title">الصفقات المفتوحة</div>
+<div class="card" style="margin-bottom:28px">
+  <div class="no-positions" id="no-positions">لا توجد صفقات مفتوحة حالياً — البوت ينتظر افتتاح السوق</div>
+  <table class="positions-table" id="positions-table" style="display:none">
+    <thead>
+      <tr>
+        <th>السهم</th>
+        <th>الكمية</th>
+        <th>سعر الدخول</th>
+        <th>السعر الحالي</th>
+        <th>الربح/الخسارة</th>
+        <th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody id="positions-body"></tbody>
+  </table>
+</div>
+
+<div class="section-title">سجل البوت</div>
+<div class="log-container">
+  <div id="log-entries"></div>
+</div>
+
+<div class="footer">
+  بوت التداول الآلي — Paper Trading Mode — لا توجد أموال حقيقية
+</div>
+
+<script>
+const WATCHLIST = ['AMC', 'SOFI', 'PLUG', 'MULN', 'SNDL'];
+
+// بيانات وهمية للعرض
+const mockData = {
+  AMC:  { price: 4.82, rsi: 62, cci: 115, relVol: 2.3, ema9: 4.75, ema20: 4.60, vwap: 4.70 },
+  SOFI: { price: 7.14, rsi: 58, cci: 88,  relVol: 1.8, ema9: 7.10, ema20: 7.05, vwap: 7.20 },
+  PLUG: { price: 2.31, rsi: 71, cci: 142, relVol: 3.1, ema9: 2.28, ema20: 2.15, vwap: 2.25 },
+  MULN: { price: 0.47, rsi: 45, cci: 72,  relVol: 0.9, ema9: 0.48, ema20: 0.50, vwap: 0.49 },
+  SNDL: { price: 1.23, rsi: 66, cci: 108, relVol: 2.7, ema9: 1.21, ema20: 1.15, vwap: 1.18 },
+};
+
+const logs = [
+  { time: '03:28', icon: '💤', msg: '<span class="warn">السوق مغلق</span> — البوت في وضع الانتظار' },
+  { time: '03:27', icon: '🔍', msg: 'فحص الأسهم: <span class="symbol">AMC SOFI PLUG MULN SNDL</span>' },
+  { time: '03:26', icon: '📊', msg: '<span class="symbol">PLUG</span> — RelVol: <span class="highlight">3.1x</span> | RSI: 71 | CCI: 142' },
+  { time: '03:25', icon: '⚙️', msg: 'البوت بدأ التشغيل بنجاح — Paper Trading Mode' },
+];
+
+function checkConditions(d) {
+  return d.price > d.vwap && d.ema9 > d.ema20 && d.rsi > 55 && d.rsi < 90 && d.cci > 100 && d.relVol > 2;
+}
+
+function buildStocksGrid() {
+  const grid = document.getElementById('stocks-grid');
+  grid.innerHTML = '';
+  WATCHLIST.forEach(sym => {
+    const d = mockData[sym];
+    const active = checkConditions(d);
+    const aboveVwap = d.price > d.vwap;
+    const emaOk = d.ema9 > d.ema20;
+
+    grid.innerHTML += `
+      <div class="stock-card ${active ? 'active' : ''}">
+        <div class="stock-symbol">${sym} ${active ? '🚀' : ''}</div>
+        <div class="indicator-row">
+          <span class="ind-label">السعر</span>
+          <span class="ind-value">$${d.price}</span>
+        </div>
+        <div class="indicator-row">
+          <span class="ind-label">VWAP</span>
+          <span class="ind-value ${aboveVwap ? 'good' : 'bad'}">${aboveVwap ? '↑' : '↓'} $${d.vwap}</span>
+        </div>
+        <div class="indicator-row">
+          <span class="ind-label">RSI</span>
+          <span class="ind-value ${d.rsi > 55 && d.rsi < 90 ? 'good' : 'bad'}">${d.rsi}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${d.rsi}%;background:${d.rsi > 55 && d.rsi < 90 ? 'var(--green)' : 'var(--red)'}"></div>
+        </div>
+        <div class="indicator-row">
+          <span class="ind-label">CCI</span>
+          <span class="ind-value ${d.cci > 100 ? 'good' : 'neutral'}">${d.cci}</span>
+        </div>
+        <div class="indicator-row">
+          <span class="ind-label">RelVol</span>
+          <span class="ind-value ${d.relVol > 2 ? 'good' : 'bad'}">${d.relVol}x</span>
+        </div>
+        <div class="indicator-row">
+          <span class="ind-label">EMA9>20</span>
+          <span class="ind-value ${emaOk ? 'good' : 'bad'}">${emaOk ? '✓' : '✗'}</span>
+        </div>
+        <div style="margin-top:10px;font-size:11px;font-weight:700;color:${active ? 'var(--green)' : 'var(--dim)'}">
+          ${active ? '✅ شروط الدخول مكتملة' : '⏳ في الانتظار'}
+        </div>
+      </div>
+    `;
+  });
+}
+
+function buildLogs() {
+  const container = document.getElementById('log-entries');
+  container.innerHTML = logs.map(l => `
+    <div class="log-entry">
+      <span class="log-time">${l.time}</span>
+      <span class="log-icon">${l.icon}</span>
+      <span class="log-msg">${l.msg}</span>
+    </div>
+  `).join('');
+}
+
+function updateCountdown() {
+  const now = new Date();
+  // السوق يفتح 9:30 AM ET = 4:30 PM Riyadh
+  const riyadhOffset = 3 * 60;
+  const etOffset = -5 * 60;
+  const nowET = new Date(now.getTime() + (etOffset - now.getTimezoneOffset()) * 60000);
+  
+  let open = new Date(nowET);
+  open.setHours(9, 30, 0, 0);
+  if (nowET >= open && nowET.getHours() < 16) {
+    document.getElementById('market-banner').style.background = 'rgba(0,255,136,0.06)';
+    document.getElementById('market-banner').style.borderColor = 'rgba(0,255,136,0.2)';
+    document.getElementById('market-banner').style.color = 'var(--green)';
+    document.getElementById('market-banner').innerHTML = '🟢 السوق مفتوح الآن — البوت يبحث عن الفرص';
+    return;
+  }
+  if (nowET >= open) open.setDate(open.getDate() + 1);
+  
+  const diff = open - nowET;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('countdown').textContent = 
+    `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateAll() {
+  // تحديث وهمي للأسعار
+  WATCHLIST.forEach(sym => {
+    mockData[sym].price = +(mockData[sym].price * (1 + (Math.random()-0.5)*0.01)).toFixed(2);
+    mockData[sym].relVol = +(mockData[sym].relVol * (1 + (Math.random()-0.5)*0.1)).toFixed(1);
+  });
+  buildStocksGrid();
+  document.getElementById('last-check').textContent = new Date().toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit'});
+  
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit'});
+  logs.unshift({ time: timeStr, icon: '🔄', msg: 'تم تحديث البيانات' });
+  if (logs.length > 20) logs.pop();
+  buildLogs();
+}
+
+// تشغيل
+buildStocksGrid();
+buildLogs();
+setInterval(updateCountdown, 1000);
+setInterval(updateAll, 60000);
+updateCountdown();
+
+document.getElementById('last-check').textContent = new Date().toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit'});
+</script>
+</body>
+</html>
